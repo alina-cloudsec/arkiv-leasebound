@@ -1,0 +1,19 @@
+{
+  "name": "arkiv-leasebound",
+  "version": "1.0.0",
+  "description": "Gives an AI agent permission for only a few minutes. When the time is up, the agent is stopped, and everything it did is saved.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@arkiv-network/sdk": "^0.8.1",
+    "dotenv": "^18.0.8",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "viem": "^2.57.7"
+  }
+}
