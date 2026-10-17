@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Leasebound: permission slips for AI agents</title>
+    <style>
+      :root { --bg:#ffffff; --text:#1b1b1f; --muted:#5f6368; --card:#f4f5f7; --line:#dcdfe4; --ok:#157347; --bad:#b42318; --warn:#a15c00; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg:#14151a; --text:#ececf1; --muted:#a0a4ad; --card:#1d1f26; --line:#2f323b; --ok:#4cc38a; --bad:#ff7b72; --warn:#e3b341; }
+      }
+      * { box-sizing: border-box; }
+      body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+      main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+      h1 { font-size: 1.6rem; margin: 0 0 4px; }
+      h2 { font-size: 1.1rem; margin: 28px 0 8px; }
+      p { margin: 6px 0; }
+      .muted { color: var(--muted); font-size: .92rem; }
+      .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+      code { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; word-break: break-all; }
+      input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+      button { margin-top: 8px; padding: 10px 16px; border-radius: 8px; border: 0; background: #3b5bdb; color: #fff; font-size: .95rem; cursor: pointer; }
+      .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: .85rem; border: 1px solid currentColor; }
+      .ALLOWED, .ACTIVE { color: var(--ok); }
+      .BLOCKED { color: var(--bad); }
+      .warn { color: var(--warn); }
+      .scroll { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+      th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      tr.blocked td { background: rgba(180, 35, 24, .10); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Leasebound</h1>
+      <p>Give an AI agent permission for only a few minutes. When the time is up, the agent is stopped, and everything it did is saved.</p>
+      <p class="muted">Built on Arkiv (Tiramisu testnet). All data here is made up (synthetic).</p>
+ 
+      <h2>1. Check a lease</h2>
+      <div class="card">
+        <p class="muted">Paste the key of a lease. We ask Arkiv if it is still alive and if it was made by our wallet.</p>
+        <input id="leaseKey" placeholder="0x... (lease key)" autocomplete="off" />
+        <button id="checkBtn">Check</button>
+        <p id="checkResult" aria-live="polite"></p>
+      </div>
+ 
+      <h2>2. Audit diary (newest first)</h2>
+      <p class="muted">Only notes made by our wallet <code id="trusted"></code> are shown. Anyone can write a note called "audit", so we do not trust the name. We trust who made it.</p>
+      <div class="card scroll">
+        <table>
+          <thead><tr><th>Block</th><th>What the agent tried</th><th>Answer</th><th>Why</th><th>Lease key</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <p id="status" class="muted" aria-live="polite"></p>
+      </div>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
