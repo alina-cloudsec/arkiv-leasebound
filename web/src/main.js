@@ -80,6 +80,7 @@ $("checkBtn").addEventListener("click", async () => {
 
 // ---------- 2. Audit diary ----------
 let loading = false;
+let lastItems = [];
 async function loadAudit() {
   if (loading) return;
   loading = true;
@@ -107,6 +108,7 @@ async function loadAudit() {
 
     // The query has no sort option, so we sort here: newest first.
     const items = [...result.entities].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    lastItems = items;
 
     const rows = $("rows");
     rows.replaceChildren();
@@ -118,7 +120,7 @@ async function loadAudit() {
 
       const cells = [
         String(e.createdAt ?? ""),
-        p.action ?? "",
+        p.actionHash ? `\u{1F512} hash ${String(p.actionHash).slice(0, 12)}...` : p.action ?? "",
         answer,
         attr(e.attributes, "reason") ?? p.reason ?? "",
         short(attr(e.attributes, "lease")),
@@ -154,6 +156,55 @@ async function loadAudit() {
     loading = false;
   }
 }
+
+
+// ---------- 3. Privacy check ----------
+async function sha256Hex(text) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+$("vBtn").addEventListener("click", async () => {
+  const action = $("vAction").value;
+  const salt = $("vSalt").value.trim();
+  const out = $("vResult");
+  out.className = "";
+  if (!action || !salt) {
+    out.textContent = "Please fill both boxes: the text and the salt.";
+    return;
+  }
+  const hash = await sha256Hex(`${salt}:${action}`);
+  const match = lastItems.find((e) => readPayload(e.payload).actionHash === hash);
+  if (match) {
+    out.className = "ACTIVE";
+    out.textContent = `MATCH: a note at block ${match.createdAt} (${attr(match.attributes, "result")}, ${attr(match.attributes, "reason")}) was written for exactly this text.`;
+  } else {
+    out.className = "warn";
+    out.textContent = "No note on this page matches. The text and the salt must be exactly the same, and the note must be in the list above.";
+  }
+});
+
+// ---------- 4. Read it without us ----------
+(function showRawQuery() {
+  const RPC = "https://rpc.tiramisu.db-chain.testnet.arkiv.network";
+  const query = `type = str('audit') AND $creator = addr(${TRUSTED})`;
+  const body = {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "arkiv_query",
+    params: [
+      query,
+      {
+        select: { key: true, owner: false, creator: false, createdAt: true, updatedAt: false, expiresAt: false, creationFlags: false, contentType: false, payload: true, attributeSchema: false, attributes: true },
+        limit: "0x64",
+      },
+    ],
+  };
+  // \u0027 is a single quote written in JSON, so the command also works inside single quotes in bash.
+  const text = JSON.stringify(body).replace(/'/g, "\\u0027");
+  $("rawQuery").textContent = query;
+  $("rawCurl").textContent = `curl -s ${RPC} -H "content-type: application/json" -d '${text}'`;
+})();
 
 // No automatic timer. The public Arkiv server limits how often one visitor can ask,
 // so we load once and then only when the person presses Refresh.

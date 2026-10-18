@@ -62,6 +62,9 @@
       .filters select, .filters input { width: auto; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: .9rem; font-family: inherit; }
       .filters input { width: 90px; }
 
+      pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; font-size: .8rem; margin: 6px 0 12px; font-family: ui-monospace, Consolas, monospace; }
+      .card input + input { margin-top: 8px; }
+
       /* ---------- summary cards ---------- */
       .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
       .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; text-align: center; }
@@ -114,6 +117,24 @@
         </table>
         <button id="refreshBtn" type="button">Apply / Refresh</button>
         <p id="status" class="muted" aria-live="polite"></p>
+      </div>
+
+      <h2>3. Privacy check</h2>
+      <p class="muted">On Arkiv we keep only a salted hash of what the agent tried (no command text). The owner keeps the text and the salt in a private file. Paste both here, and we check if a note matches. The recipe is public: sha256 of <code>salt:text</code>.</p>
+      <div class="card">
+        <input id="vAction" placeholder="The text, for example: RUN node scripts/demo-agent.mjs" autocomplete="off" />
+        <input id="vSalt" placeholder="The salt (from the owner's private-log.jsonl)" autocomplete="off" />
+        <button id="vBtn" type="button">Check</button>
+        <p id="vResult" aria-live="polite"></p>
+      </div>
+
+      <h2>4. Read it without us</h2>
+      <p class="muted">This page is only a static page. It reads the public Arkiv server directly, and we run no server. You can ask the same question yourself, with the query below, with curl, or with <code>node scripts/read-audit.mjs &lt;wallet&gt;</code> from our repository.</p>
+      <div class="card">
+        <p class="muted">The query:</p>
+        <pre id="rawQuery"></pre>
+        <p class="muted">The same question with curl (bash):</p>
+        <pre id="rawCurl"></pre>
       </div>
     </main>
     <script>
