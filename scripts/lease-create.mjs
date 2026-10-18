@@ -1,6 +1,8 @@
 // Makes a lease on Arkiv. It lives for 10 minutes, or for the number of seconds you type.
-// Use:  node scripts/lease-create.mjs          (10 minutes)
-//       node scripts/lease-create.mjs 90       (90 seconds, good for a short demo)
+// Use:  node scripts/lease-create.mjs                      (10 minutes, any program may run)
+//       node scripts/lease-create.mjs 90                   (90 seconds, good for a short demo)
+//       node scripts/lease-create.mjs 90 --allow node      (only the program "node" may run)
+//       node scripts/lease-create.mjs 90 --allow node,git  (a list is fine too)
 import "dotenv/config";
 import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
 import { tiramisu } from "@arkiv-network/sdk/chains";
@@ -15,7 +17,18 @@ const green = paint("1;32");
 const cyan = paint("36");
 const dim = paint("2");
 
-const seconds = Number(process.argv[2] ?? 600);
+const args = process.argv.slice(2);
+const allowAt = args.indexOf("--allow");
+let allow;
+if (allowAt !== -1) {
+  allow = (args[allowAt + 1] ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (allow.length === 0) {
+    console.log("After --allow, type the program names. Example: node scripts/lease-create.mjs 90 --allow node");
+    process.exit(1);
+  }
+}
+const plain = args.filter((_, i) => i !== allowAt && i !== allowAt + 1);
+const seconds = Number(plain[0] ?? 600);
 if (!Number.isInteger(seconds) || seconds < 10 || seconds > 86400) {
   console.log("Please type a whole number of seconds between 10 and 86400. Example: node scripts/lease-create.mjs 90");
   process.exit(1);
@@ -29,6 +42,7 @@ const { entityKey, txHash } = await client.createEntity({
   payload: jsonToPayload({
     agent: "demo-agent-1",
     permission: "read-demo-file (synthetic data only)",
+    ...(allow ? { allow } : {}),
   }),
   contentType: "application/json",
   attributes: { type: "lease", agent: "demo-agent-1" },
@@ -36,6 +50,7 @@ const { entityKey, txHash } = await client.createEntity({
 });
 
 console.log(green(`Lease created (lives ${seconds} seconds)`));
+console.log("Programs allowed:", allow ? allow.join(", ") : "any (no list)");
 console.log("Key:        ", cyan(entityKey));
 console.log(dim(`Transaction: ${txHash}`));
 const lease = await publicClient.getEntity(entityKey);

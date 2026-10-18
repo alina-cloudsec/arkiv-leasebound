@@ -58,6 +58,10 @@
       #intro.hide { animation: none; }
       @media (prefers-reduced-motion: reduce) { .float-icon { animation: none; opacity: .6; bottom: 12%; } }
 
+      .filters { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 8px 0 4px; }
+      .filters select, .filters input { width: auto; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: .9rem; font-family: inherit; }
+      .filters input { width: 90px; }
+
       /* ---------- summary cards ---------- */
       .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
       .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; text-align: center; }
@@ -97,12 +101,18 @@
 
       <h2>2. Audit diary (newest first)</h2>
       <p class="muted">Only notes made by our wallet <code id="trusted"></code> are shown. Anyone can write a note called "audit", so we do not trust the name. We trust who made it.</p>
+      <div class="filters">
+        <label>Show <select id="fResult"><option value="">all answers</option><option value="BLOCKED">only BLOCKED</option><option value="ALLOWED">only ALLOWED</option></select></label>
+        <label>from the last <input id="fBlocks" type="number" min="0" step="1" placeholder="all" /> blocks</label>
+        <span class="muted">(1 block is about 2 seconds)</span>
+      </div>
+      <p class="muted">Notes written before we added the block number are not shown when you pick a number of blocks.</p>
       <div class="card scroll">
         <table>
           <thead><tr><th>Block</th><th>What the agent tried</th><th>Answer</th><th>Why</th><th>Lease key</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
-        <button id="refreshBtn" type="button">Refresh</button>
+        <button id="refreshBtn" type="button">Apply / Refresh</button>
         <p id="status" class="muted" aria-live="polite"></p>
       </div>
     </main>

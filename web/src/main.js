@@ -1,6 +1,7 @@
 import { createPublicClient, NoEntityFoundError } from "@arkiv-network/sdk";
 import { tiramisu } from "@arkiv-network/sdk/chains";
-import { eq } from "@arkiv-network/sdk/query";
+import { and, eq, gte } from "@arkiv-network/sdk/query";
+import { u64 } from "@arkiv-network/sdk/attr";
 import { http } from "viem";
 
 // The only wallet we trust. Notes made by other wallets are ignored.
@@ -85,10 +86,20 @@ async function loadAudit() {
   const status = $("status");
   status.textContent = "Loading...";
   try {
+    // Build the question from the two filters. Always: type = audit, and made by our wallet.
+    const conditions = [eq("type", "audit")];
+    const wanted = $("fResult").value;
+    if (wanted) conditions.push(eq("result", wanted));
+    const lastBlocks = Number($("fBlocks").value);
+    if (Number.isInteger(lastBlocks) && lastBlocks > 0) {
+      const nowBlock = await withTimeout(client.getBlockNumber());
+      const from = nowBlock > BigInt(lastBlocks) ? nowBlock - BigInt(lastBlocks) : 0n;
+      conditions.push(gte("block", u64(from)));
+    }
     const result = await withTimeout(
       client
         .select({ key: true, createdAt: true, attributes: true, payload: true })
-        .where(eq("type", "audit"))
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions))
         .createdBy(TRUSTED)
         .limit(100)
         .fetch()
