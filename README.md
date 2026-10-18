@@ -7,7 +7,7 @@ Built for the Arkiv Global Tour Stop (9 to 18 October 2026, on the road to Devco
 | | |
 | --- | --- |
 | Live page | https://alina-cloudsec.github.io/arkiv-leasebound/ |
-| Demo video | ADD THE VIDEO LINK HERE |
+| Demo video | https://youtu.be/OgjpOkK_VtU |
 | Network | Arkiv Tiramisu testnet (chain ID 7738577) |
 | Tracks | Security, Censorship Resistance, Privacy, Open Source |
 | Our wallet | `0x0A4aA86B07dB12093053a79714c7FC37DF0E27CF` |
