@@ -28,14 +28,57 @@
       table { width: 100%; border-collapse: collapse; font-size: .9rem; }
       th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
       tr.blocked td { background: rgba(180, 35, 24, .10); }
+
+      /* ---------- intro screen ---------- */
+      #intro { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; overflow: hidden;
+        background: radial-gradient(circle at 20% 20%, #2b3a8f 0%, transparent 45%), radial-gradient(circle at 80% 75%, #0f766e 0%, transparent 45%), linear-gradient(160deg, #0b1030, #14103a 55%, #07252b);
+        color: #f4f6ff; transition: opacity .6s ease, visibility .6s ease; }
+      #intro.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+      #intro h1 { font-size: clamp(2.2rem, 7vw, 4rem); margin: 0 0 10px; letter-spacing: .5px; background: linear-gradient(90deg, #9ec5ff, #b8f3e6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      #intro p { max-width: 520px; margin: 0 0 22px; font-size: 1.05rem; color: #cfd6ff; }
+      #intro button { margin: 0; padding: 12px 26px; font-size: 1rem; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); color: #fff; backdrop-filter: blur(4px); }
+      #intro button:hover { background: rgba(255,255,255,.24); }
+      #intro .hint { margin-top: 14px; font-size: .85rem; color: #aab3e6; }
+      .intro-content { position: relative; z-index: 2; }
+      .bubble { position: absolute; bottom: -80px; border-radius: 50%; z-index: 1;
+        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), rgba(158,197,255,.18) 55%, rgba(184,243,230,.08));
+        border: 1px solid rgba(255,255,255,.25); animation: floatUp linear infinite; }
+      @keyframes floatUp {
+        0%   { transform: translateY(0) translateX(0); opacity: 0; }
+        10%  { opacity: .9; }
+        50%  { transform: translateY(-55vh) translateX(18px); }
+        100% { transform: translateY(-120vh) translateX(-14px); opacity: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) { .bubble { animation: none; opacity: .5; bottom: 20%; } #intro { transition: none; } }
+
+
+      .float-icon { position: absolute; bottom: -60px; z-index: 1; opacity: 0; filter: drop-shadow(0 4px 10px rgba(0,0,0,.35)); animation: floatUp linear infinite; user-select: none; }
+      @keyframes introAutoHide { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+      #intro { animation: introAutoHide .6s ease 13s forwards; }
+      #intro.hide { animation: none; }
+      @media (prefers-reduced-motion: reduce) { .float-icon { animation: none; opacity: .6; bottom: 12%; } }
+
+      /* ---------- summary cards ---------- */
+      .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+      .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; text-align: center; }
+      .stat b { display: block; font-size: 1.7rem; line-height: 1.2; }
+      .stat span { font-size: .85rem; color: var(--muted); }
     </style>
   </head>
   <body>
+    <div id="intro" role="dialog" aria-label="Welcome">
+      <div class="intro-content">
+        <h1>Arkiv Leasebound</h1>
+        <p>Give an AI agent permission for only a few minutes. When the time is up, the agent is stopped, and everything it did is saved.</p>
+        <button id="enterBtn" type="button">Open dashboard</button>
+        <div class="hint">The dashboard opens by itself after about 12 seconds.</div>
+      </div>
+    </div>
     <main>
       <h1>Leasebound</h1>
       <p>Give an AI agent permission for only a few minutes. When the time is up, the agent is stopped, and everything it did is saved.</p>
       <p class="muted">Built on Arkiv (Tiramisu testnet). All data here is made up (synthetic).</p>
- 
+
       <h2>1. Check a lease</h2>
       <div class="card">
         <p class="muted">Paste the key of a lease. We ask Arkiv if it is still alive and if it was made by our wallet.</p>
@@ -43,7 +86,15 @@
         <button id="checkBtn">Check</button>
         <p id="checkResult" aria-live="polite"></p>
       </div>
- 
+
+      <h2>Summary</h2>
+      <p class="muted">Counted from the audit notes below. Nothing here is guessed.</p>
+      <div class="cards">
+        <div class="stat"><b id="sAllowed">-</b><span>ALLOWED</span></div>
+        <div class="stat"><b id="sBlocked">-</b><span>BLOCKED</span></div>
+        <div class="stat"><b id="sTotal">-</b><span>notes shown</span></div>
+      </div>
+
       <h2>2. Audit diary (newest first)</h2>
       <p class="muted">Only notes made by our wallet <code id="trusted"></code> are shown. Anyone can write a note called "audit", so we do not trust the name. We trust who made it.</p>
       <div class="card scroll">
@@ -51,9 +102,49 @@
           <thead><tr><th>Block</th><th>What the agent tried</th><th>Answer</th><th>Why</th><th>Lease key</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
+        <button id="refreshBtn" type="button">Refresh</button>
         <p id="status" class="muted" aria-live="polite"></p>
       </div>
     </main>
+    <script>
+      // Intro screen. This is a plain script on purpose: it works even if the big script fails.
+      (function () {
+        var intro = document.getElementById("intro");
+        if (!intro) return;
+        var icons = ["\uD83D\uDD11", "\u23F3", "\uD83D\uDEE1\uFE0F", "\uD83D\uDD12", "\uD83D\uDCDC", "\uD83E\uDD16", "\u26D3\uFE0F", "\u23F1\uFE0F", "\uD83D\uDD11", "\uD83E\uDD16"];
+        // key, hourglass, shield, lock, scroll (diary), robot (agent), chain, timer
+        var i, el, size;
+        for (i = 0; i < 18; i++) {
+          el = document.createElement("span");
+          size = 14 + Math.random() * 70;
+          el.className = "bubble";
+          el.style.width = el.style.height = size + "px";
+          el.style.left = Math.random() * 100 + "%";
+          el.style.animationDuration = 8 + Math.random() * 10 + "s";
+          el.style.animationDelay = -Math.random() * 12 + "s";
+          intro.appendChild(el);
+        }
+        for (i = 0; i < icons.length; i++) {
+          el = document.createElement("span");
+          el.className = "float-icon";
+          el.textContent = icons[i];
+          el.style.fontSize = 26 + Math.random() * 26 + "px";
+          el.style.left = 5 + Math.random() * 88 + "%";
+          el.style.animationDuration = 9 + Math.random() * 9 + "s";
+          el.style.animationDelay = -Math.random() * 14 + "s";
+          intro.appendChild(el);
+        }
+        var done = false;
+        function enter() {
+          if (done) return;
+          done = true;
+          intro.classList.add("hide");
+          setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 700);
+        }
+        document.getElementById("enterBtn").addEventListener("click", enter);
+        setTimeout(enter, 12000);
+      })();
+    </script>
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
