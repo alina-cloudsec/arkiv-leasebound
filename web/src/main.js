@@ -5,12 +5,26 @@ import { http } from "viem";
 
 // The only wallet we trust. Notes made by other wallets are ignored.
 const TRUSTED = "0x0A4aA86B07dB12093053a79714c7FC37DF0E27CF";
-const REFRESH_MS = 8000;
 
 const client = createPublicClient({ chain: tiramisu, transport: http() });
 
 const $ = (id) => document.getElementById(id);
+
+// If the public server is busy, the SDK can wait for a very long time without any message.
+// So we stop waiting after 20 seconds and tell the person what happened.
+const withTimeout = (promise, ms = 20000) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Arkiv did not answer in time. The public server may be busy. Please try again in a few minutes.")),
+        ms
+      )
+    ),
+  ]);
 $("trusted").textContent = TRUSTED;
+
+
 
 // Attributes can come back as { type, value } or as a plain value. Handle both.
 const attr = (attributes, name) => {
@@ -31,11 +45,11 @@ const short = (s) => (s && s.length > 14 ? `${s.slice(0, 8)}...${s.slice(-6)}` :
 // ---------- 1. Check a lease ----------
 async function checkLease(key) {
   try {
-    const lease = await client.getEntity(key);
+    const lease = await withTimeout(client.getEntity(key));
     if (lease.creator.toLowerCase() !== TRUSTED.toLowerCase()) {
       return { cls: "BLOCKED", text: "BLOCKED: this lease was not made by our wallet (fake lease)." };
     }
-    const now = await client.getBlockNumber();
+    const now = await withTimeout(client.getBlockNumber());
     if (lease.expiresAt <= now) {
       return { cls: "BLOCKED", text: "BLOCKED: this lease has expired." };
     }
@@ -64,15 +78,21 @@ $("checkBtn").addEventListener("click", async () => {
 });
 
 // ---------- 2. Audit diary ----------
+let loading = false;
 async function loadAudit() {
+  if (loading) return;
+  loading = true;
   const status = $("status");
+  status.textContent = "Loading...";
   try {
-    const result = await client
-      .select({ key: true, createdAt: true, attributes: true, payload: true })
-      .where(eq("type", "audit"))
-      .createdBy(TRUSTED)
-      .limit(100)
-      .fetch();
+    const result = await withTimeout(
+      client
+        .select({ key: true, createdAt: true, attributes: true, payload: true })
+        .where(eq("type", "audit"))
+        .createdBy(TRUSTED)
+        .limit(100)
+        .fetch()
+    );
 
     // The query has no sort option, so we sort here: newest first.
     const items = [...result.entities].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
@@ -110,13 +130,21 @@ async function loadAudit() {
       });
       rows.append(tr);
     }
+    const answers = items.map((e) => attr(e.attributes, "result") ?? readPayload(e.payload).result ?? "");
+    $("sAllowed").textContent = answers.filter((a) => a === "ALLOWED").length;
+    $("sBlocked").textContent = answers.filter((a) => a === "BLOCKED").length;
+    $("sTotal").textContent = items.length;
     status.textContent = items.length
       ? `${items.length} note(s). Updated ${new Date().toLocaleTimeString()}.`
       : "No audit notes yet.";
   } catch (e) {
     status.textContent = `Could not load notes: ${e.shortMessage ?? e.message}`;
+  } finally {
+    loading = false;
   }
 }
 
+// No automatic timer. The public Arkiv server limits how often one visitor can ask,
+// so we load once and then only when the person presses Refresh.
+$("refreshBtn").addEventListener("click", loadAudit);
 loadAudit();
-setInterval(loadAudit, REFRESH_MS);
