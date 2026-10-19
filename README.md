@@ -222,6 +222,7 @@ We ran these on the Tiramisu testnet and looked at the results.
 - **Older notes** (made before we added privacy mode) show the command text. Newer notes show only the hash.
 - **Revoke is not instant.** Leash finds it within about 15 seconds.
 - **Notes disappear after 30 days.** After that, the proof is the transactions on the explorer.
+- **We tested leash with a pretend agent, not a real AI tool.** Leash removes variables with API_KEY or TOKEN in their name, so a real AI tool would not get its own key under leash today. A setting to let chosen variables through is not built yet.
 - **This is a testnet demo** with made-up data. It is not ready for real use.
 
 ## Why Arkiv
